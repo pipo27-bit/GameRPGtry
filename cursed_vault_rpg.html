@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>呪われた金庫 — RPG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0812;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100vh;font-family:'Crimson Text',serif}
+#wrap{position:relative;width:640px;user-select:none}
+canvas{display:block;width:640px;height:384px;image-rendering:pixelated;cursor:default}
+/* TITLE */
+#title{position:absolute;inset:0;background:#0a0812;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;padding:2rem}
+#title h1{font-family:'Cinzel',serif;font-size:2rem;color:#C9A84C;text-align:center;letter-spacing:.06em;line-height:1.3}
+#title h2{font-family:'Cinzel',serif;font-size:1rem;color:#9B96B0;margin-top:.3rem;letter-spacing:.1em}
+#title .story{font-size:.95rem;color:#c8c2d8;line-height:1.8;margin:1.5rem 0;text-align:center;max-width:520px}
+#title .story-jp{font-size:.85rem;color:#7a7590;font-style:italic;line-height:1.7;text-align:center;max-width:520px}
+#title button{font-family:'Cinzel',serif;font-size:.85rem;font-weight:600;letter-spacing:.1em;padding:.75rem 2.5rem;border:1px solid #C9A84C;background:transparent;color:#C9A84C;cursor:pointer;border-radius:6px;margin-top:1.5rem;transition:background .2s}
+#title button:hover{background:rgba(201,168,76,.15)}
+/* DIALOGUE */
+#dlg{position:absolute;bottom:0;left:0;right:0;background:rgba(10,8,18,.95);border-top:1px solid rgba(201,168,76,.3);padding:12px 16px 14px;z-index:10;display:none}
+#dlg-name{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.1em;color:#C9A84C;margin-bottom:5px}
+#dlg-text{font-size:.95rem;color:#E8E4D9;line-height:1.65}
+#dlg-jp{font-size:.82rem;color:#9B96B0;font-style:italic;margin-top:3px;line-height:1.5}
+#dlg-continue{font-size:.72rem;color:#C9A84C;text-align:right;margin-top:6px;animation:blink 1s infinite}
+/* PUZZLE */
+#puz{position:absolute;inset:0;background:rgba(10,8,18,.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:15;padding:2rem}
+#puz-q{font-family:'Cinzel',serif;font-size:.9rem;color:#C9A84C;text-align:center;margin-bottom:.3rem;letter-spacing:.04em}
+#puz-q-jp{font-size:.82rem;color:#9B96B0;font-style:italic;text-align:center;margin-bottom:1.25rem}
+.puz-opt{width:100%;max-width:520px;text-align:left;padding:.75rem 1rem;background:rgba(255,255,255,.04);border:.5px solid rgba(201,168,76,.2);border-radius:8px;color:#c8c2d8;font-family:'Crimson Text',serif;font-size:.92rem;cursor:pointer;margin-bottom:.5rem;transition:background .15s,border-color .15s;line-height:1.5}
+.puz-opt:hover{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.5)}
+/* HINT REVEAL */
+#hint-panel{position:absolute;inset:0;background:rgba(10,8,18,.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:15;padding:2rem}
+#hint-panel h3{font-family:'Cinzel',serif;font-size:1rem;color:#C9A84C;margin-bottom:1rem;letter-spacing:.1em}
+.hint-card{width:100%;max-width:500px;background:rgba(201,168,76,.08);border:.5px solid rgba(201,168,76,.3);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:.65rem}
+.hint-label{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.12em;color:#7a7590;margin-bottom:.3rem}
+.hint-text{font-size:.92rem;color:#C9A84C;font-style:italic}
+.hint-jp{font-size:.8rem;color:#9B96B0;font-style:italic;margin-top:.2rem}
+#hint-panel button{font-family:'Cinzel',serif;font-size:.78rem;padding:.6rem 1.8rem;border:1px solid #C9A84C;background:transparent;color:#C9A84C;cursor:pointer;border-radius:6px;margin-top:.75rem;letter-spacing:.08em;transition:background .15s}
+#hint-panel button:hover{background:rgba(201,168,76,.12)}
+/* HINTS HUD */
+#hud{position:absolute;top:8px;right:8px;z-index:5;pointer-events:none}
+.hud-dot{width:9px;height:9px;border-radius:50%;border:1px solid rgba(201,168,76,.4);background:transparent;display:inline-block;margin-left:3px;transition:background .4s}
+.hud-dot.lit{background:#C9A84C;border-color:#C9A84C}
+/* MESSAGE */
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,8,18,.9);border:.5px solid rgba(201,168,76,.3);border-radius:10px;padding:.9rem 1.6rem;font-size:.9rem;color:#E8E4D9;text-align:center;z-index:12;display:none;pointer-events:none}
+/* VICTORY */
+#victory{position:absolute;inset:0;background:#0a0812;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;padding:2rem;overflow-y:auto}
+#victory h1{font-family:'Cinzel',serif;font-size:1.6rem;color:#C9A84C;text-align:center}
+.vic-letter{background:rgba(201,168,76,.08);border:.5px solid rgba(201,168,76,.25);border-radius:10px;padding:1.2rem 1.4rem;margin:1rem 0;max-width:520px;font-size:.93rem;color:#E8E4D9;line-height:1.85;font-style:italic}
+.vic-jp{font-size:.82rem;color:#9B96B0;line-height:1.75;margin-top:.6rem;font-style:italic}
+#victory button{font-family:'Cinzel',serif;font-size:.8rem;padding:.65rem 2rem;border:1px solid #C9A84C;background:transparent;color:#C9A84C;cursor:pointer;border-radius:6px;margin-top:1rem;letter-spacing:.08em;transition:background .15s}
+#victory button:hover{background:rgba(201,168,76,.12)}
+/* CONTROLS HINT */
+#controls{position:absolute;bottom:98px;left:8px;font-size:.68rem;color:rgba(201,168,76,.5);pointer-events:none;z-index:5;line-height:1.6}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="canvas" width="640" height="384" tabindex="0"></canvas>
+
+  <!-- TITLE -->
+  <div id="title">
+    <h1>呪われた金庫</h1>
+    <h2>THE CURSED VAULT</h2>
+    <div style="width:50px;height:1px;background:rgba(201,168,76,.3);margin:.8rem auto"></div>
+    <p class="story">Five people carry a burden they cannot solve alone. Listen to each one. Help them. Every worry shared is a lock undone — and a clue to where the key sleeps.</p>
+    <p class="story-jp">5人の人物が一人では解決できない悩みを抱えている。それぞれの話を聞き、力になれ。分かち合われた悩みは錠を外す鍵となり、眠る鍵の在処を示す手がかりとなる。</p>
+    <div style="width:50px;height:1px;background:rgba(201,168,76,.3);margin:.8rem auto"></div>
+    <p style="font-size:.78rem;color:#7a7590;text-align:center">WASD / Arrow Keys to move &nbsp;·&nbsp; E to interact</p>
+    <button onclick="startGame()">Enter the Vault ／ 金庫へ入れ</button>
+  </div>
+
+  <!-- GAME HUD -->
+  <div id="hud">
+    <span style="font-size:.65rem;color:rgba(201,168,76,.5);font-family:'Cinzel',serif;letter-spacing:.06em">ROOMS</span>
+    <span id="hud-dots"></span>
+  </div>
+  <div id="controls">WASD / ↑↓←→ Move &nbsp;·&nbsp; E Interact</div>
+
+  <!-- DIALOGUE -->
+  <div id="dlg">
+    <div id="dlg-name"></div>
+    <div id="dlg-text"></div>
+    <div id="dlg-jp"></div>
+    <div id="dlg-continue">▼ Press E to continue</div>
+  </div>
+
+  <!-- PUZZLE -->
+  <div id="puz">
+    <div id="puz-q"></div>
+    <div id="puz-q-jp"></div>
+    <div id="puz-opts"></div>
+  </div>
+
+  <!-- HINT PANEL -->
+  <div id="hint-panel">
+    <h3 id="hp-title">Worry Heard ／ 悩みが聞かれた</h3>
+    <div id="hp-cards"></div>
+    <button id="hp-btn" onclick="closeHintPanel()">Continue ／ 続ける</button>
+  </div>
+
+  <!-- MESSAGE -->
+  <div id="msg"></div>
+
+  <!-- VICTORY -->
+  <div id="victory">
+    <div style="font-size:2.5rem;margin-bottom:.5rem;animation:blink 2s infinite">🔓</div>
+    <h1>The Vault Is Open ／ 金庫が開いた</h1>
+    <div style="width:50px;height:1px;background:rgba(201,168,76,.3);margin:.8rem auto"></div>
+    <div class="vic-letter">
+      "If you are reading this, you did what I could not do alone. You listened when no one else would. You helped each person carry what they feared to carry.<br><br>
+      The key was never hidden from you. It was hidden from those who weren't ready to listen.<br><br>
+      The symphony belongs to every voice that dares to speak."
+      <div class="vic-jp">
+      「これを読んでいるあなたは、私が一人ではできなかったことをした。誰も耳を傾けなかったとき、あなたは聞いてくれた。それぞれの人が恐れて抱えていたものを運ぶ手助けをしてくれた。<br><br>
+      鍵はあなたから隠されていたのではない。聴く準備ができていない者から隠されていたのだ。<br><br>
+      この交響曲は、声を上げる勇気を持つすべての人のものだ。」<br><br>
+      — Elara
+      </div>
+    </div>
+    <p style="font-family:'Cinzel',serif;font-size:.85rem;color:#C9A84C;letter-spacing:.15em">F · A · C · A · D · E</p>
+    <button onclick="location.reload()">Play Again ／ もう一度</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const T = 32, COLS = 20, ROWS = 12, W = 640, H = 384;
+
+// ══════════════════════════════════════════
+// ROOM DATA
+// ══════════════════════════════════════════
+const ROOM_DATA = [
+  // Room 0: Hall of Echoes (start)
+  {
+    name:"Hall of Echoes", nameJP:"エコーの間",
+    floor:'stone', deco:[
+      {type:'portrait',tx:9,ty:1},{type:'torch',tx:3,ty:1},{type:'torch',tx:16,ty:1},
+      {type:'pillar',tx:4,ty:2},{type:'pillar',tx:15,ty:2},
+    ],
+    npc:null,
+    exits:{left:false, right:true},
+    intro:[
+      {sp:'???',spJP:'???',en:"A cold wind moves through the Hall. Five souls wander these passages, each carrying a burden.",jp:"冷たい風が広間を吹き抜ける。5人の魂がこの通路を彷徨い、それぞれ重荷を背負っている。"},
+      {sp:'???',spJP:'???',en:"Listen. Help. The vault will know.",jp:"聞け。助けよ。金庫は分かる。"},
+    ],
+    introObj:{tx:10,ty:6}
+  },
+  // Room 1: Stone Corridor — Mira
+  {
+    name:"The Stone Passage", nameJP:"石の回廊",
+    floor:'stone', deco:[
+      {type:'barrel',tx:2,ty:2},{type:'barrel',tx:3,ty:2},
+      {type:'torch',tx:1,ty:1},{type:'torch',tx:18,ty:1},
+      {type:'crate',tx:17,ty:8},{type:'crate',tx:16,ty:8},
+    ],
+    npc:{
+      tx:10,ty:5, name:"Mira", nameJP:"ミラ",
+      color:'#D4845A', accent:'#F2A060',
+      dlg:[
+        {sp:'Mira',spJP:'ミラ',en:"Oh... a visitor. I've been walking these halls for days, trying to find the friend I promised to meet.",jp:"ああ...来訪者か。友人と会う約束をしたのに、何日もこの廊下を歩き回っている。"},
+        {sp:'Mira',spJP:'ミラ',en:"What if they stopped waiting? What if I've failed them already... I feel so useless.",jp:"もう待つのをやめてしまったかもしれない...もう失望させてしまったかもしれない。自分がひどく無力に感じる。"},
+      ],
+      question:"What would help Mira most?",
+      questionJP:"ミラに最も必要なことは？",
+      opts:[
+        {en:"Stop worrying — you'll find them eventually.",jp:"心配しないで。いつか見つかるよ。", ok:false},
+        {en:"Tell me about your friend. Let's figure this out together.",jp:"友人のことを話して。一緒に考えよう。", ok:true},
+        {en:"Maybe the meeting wasn't that important.",jp:"その待ち合わせはそこまで重要じゃないかも。", ok:false},
+      ],
+      hints:{
+        dir:'right', dirEN:"→ Go RIGHT through the east passage.",dirJP:"→ 東の通路を右へ進め。",
+        key:"The key lies where promises are kept.",keyJP:"「鍵は約束が守られる場所に眠る。」"
+      }
+    },
+    exits:{left:true, right:true}
+  },
+  // Room 2: Garden — Taro
+  {
+    name:"The Garden Room", nameJP:"庭の間",
+    floor:'grass', deco:[
+      {type:'plant',tx:2,ty:2},{type:'plant',tx:3,ty:9},
+      {type:'plant',tx:17,ty:2},{type:'plant',tx:16,ty:9},
+      {type:'plant',tx:9,ty:1},{type:'plant',tx:11,ty:10},
+      {type:'torch',tx:1,ty:1},{type:'torch',tx:18,ty:10},
+    ],
+    npc:{
+      tx:10,ty:6, name:"Taro", nameJP:"タロウ",
+      color:'#5A8A55', accent:'#7AB070',
+      dlg:[
+        {sp:'Taro',spJP:'タロウ',en:"My plant... I've done everything. Watered it every day. Talked to it. Moved it to find better light.",jp:"植物が...全部やった。毎日水をやり、話しかけ、日当たりのいい場所を探して移動させた。"},
+        {sp:'Taro',spJP:'タロウ',en:"Still it wilts. Maybe I'm just not made for caring for things. Maybe I ruin everything I try to love.",jp:"それでも枯れていく。きっと私は何かを世話するのに向いていないんだ。愛しようとするものを全部ダメにしてしまう。"},
+      ],
+      question:"What should Taro hear right now?",
+      questionJP:"今のタロウに伝えるべきことは？",
+      opts:[
+        {en:"Try a different plant. Some just aren't meant for you.",jp:"別の植物を試してみて。合わないものもある。", ok:false},
+        {en:"Caring this much already means you're doing it right.",jp:"こんなに気にかけていること自体、すでに正しいことをしている証拠だよ。", ok:true},
+        {en:"Plants grow on their own — don't overthink it.",jp:"植物は自分で育つ。考えすぎないで。", ok:false},
+      ],
+      hints:{
+        dir:'left', dirEN:"← Go LEFT through the west passage.",dirJP:"← 西の通路を左へ進め。",
+        key:"Near something that was once forgotten.",keyJP:"「かつて忘れられたものの近くに。」"
+      }
+    },
+    exits:{left:true, right:true}
+  },
+  // Room 3: Library — Elda
+  {
+    name:"The Ancient Library", nameJP:"古代の図書室",
+    floor:'wood', deco:[
+      {type:'shelf',tx:1,ty:1},{type:'shelf',tx:1,ty:4},{type:'shelf',tx:1,ty:7},
+      {type:'shelf',tx:18,ty:1},{type:'shelf',tx:18,ty:4},{type:'shelf',tx:18,ty:7},
+      {type:'table',tx:9,ty:9},{type:'table',tx:11,ty:9},
+      {type:'torch',tx:4,ty:1},{type:'torch',tx:15,ty:1},
+    ],
+    npc:{
+      tx:10,ty:5, name:"Elda", nameJP:"エルダ",
+      color:'#7A60B0', accent:'#9A80D0',
+      dlg:[
+        {sp:'Elda',spJP:'エルダ',en:"I've read every book in this room. I know the answer. I've known it for years.",jp:"この部屋のすべての本を読んだ。答えは分かっている。何年も前から分かっている。"},
+        {sp:'Elda',spJP:'エルダ',en:"But if I say it aloud... everything will change. And I'm afraid of what comes after the truth.",jp:"でも声に出したら...全てが変わってしまう。真実の後に来るものが怖いんだ。"},
+      ],
+      question:"How do you respond to Elda?",
+      questionJP:"エルダにどう返す？",
+      opts:[
+        {en:"If you know it, just say it already.",jp:"分かってるなら、もう言えばいいじゃない。", ok:false},
+        {en:"Fear of truth takes more courage to hold than to speak. I'll face it with you.",jp:"真実への恐れは、語るより抱えるほうが勇気がいる。一緒に向き合おう。", ok:true},
+        {en:"Keep it to yourself if it feels safer.",jp:"安全に感じるなら、自分の中にしまっておけばいい。", ok:false},
+      ],
+      hints:{
+        dir:'right', dirEN:"→ Go RIGHT — follow the candlelight.",dirJP:"→ 右へ — ろうそくの光を辿れ。",
+        key:"Beneath the place where old words rest.",keyJP:"「古い言葉が眠る場所の下に。」"
+      }
+    },
+    exits:{left:true, right:true}
+  },
+  // Room 4: Tavern — Kai
+  {
+    name:"The Wanderer's Tavern", nameJP:"放浪者の居酒屋",
+    floor:'wood', deco:[
+      {type:'table',tx:3,ty:3},{type:'table',tx:3,ty:7},
+      {type:'table',tx:16,ty:3},{type:'table',tx:16,ty:7},
+      {type:'barrel',tx:17,ty:9},{type:'barrel',tx:18,ty:9},
+      {type:'torch',tx:1,ty:1},{type:'torch',tx:18,ty:1},
+      {type:'crate',tx:2,ty:9},
+    ],
+    npc:{
+      tx:10,ty:5, name:"Kai", nameJP:"カイ",
+      color:'#8A6A3A', accent:'#B08A50',
+      dlg:[
+        {sp:'Kai',spJP:'カイ',en:"You know that feeling when everyone moves on and you're still in the same place? That's me.",jp:"皆が前に進んでいるのに、自分だけ同じ場所にいる感覚、分かる？それが私なんだ。"},
+        {sp:'Kai',spJP:'カイ',en:"I don't belong here. I don't belong anywhere. I keep waiting to feel ready, but ready never comes.",jp:"ここには属していない。どこにも属していない。準備ができるのを待ち続けているけど、その時は来ない。"},
+      ],
+      question:"What does Kai need to hear?",
+      questionJP:"カイに必要な言葉は？",
+      opts:[
+        {en:"Maybe you should just pick something and commit.",jp:"何かを選んで、それに集中すればいいんじゃない。", ok:false},
+        {en:"Your pace is not wrong. Belonging isn't about speed.",jp:"あなたのペースは間違っていない。どこに属するかは、速さじゃない。", ok:true},
+        {en:"You should probably catch up with the others.",jp:"他の人たちに追いつく努力をした方がいいかも。", ok:false},
+      ],
+      hints:{
+        dir:'left', dirEN:"← Go LEFT — the path turns west.",dirJP:"← 左へ — 道は西へ曲がる。",
+        key:"Beside the thing no one looks at twice.",keyJP:"「誰も二度見しないものの傍に。」"
+      }
+    },
+    exits:{left:true, right:true}
+  },
+  // Room 5: Cliff Overlook — Sage
+  {
+    name:"The Cliff Overlook", nameJP:"崖の見晴台",
+    floor:'cliff', deco:[
+      {type:'pillar',tx:4,ty:2},{type:'pillar',tx:15,ty:2},
+      {type:'torch',tx:2,ty:1},{type:'torch',tx:17,ty:1},
+      {type:'plant',tx:8,ty:9},{type:'plant',tx:12,ty:9},
+    ],
+    npc:{
+      tx:10,ty:5, name:"Sage", nameJP:"賢者",
+      color:'#D0D0D8', accent:'#F0F0F8',
+      dlg:[
+        {sp:'Sage',spJP:'賢者',en:"Ah. You've heard the others. I can tell — there's a different light in your eyes now.",jp:"ああ。他の者たちの話を聞いてきたな。分かる — 目に違う光が宿っている。"},
+        {sp:'Sage',spJP:'賢者',en:"Long ago I sealed something precious to protect it. But now I cannot find the way back. I wonder... does it still wait for me?",jp:"ずっと前、大切なものを守るために封印した。でも今はその場所へ戻る道が見つからない。まだ...待っていてくれるだろうか？"},
+      ],
+      question:"What do you tell the Sage?",
+      questionJP:"賢者に何を伝える？",
+      opts:[
+        {en:"What you sealed may be lost by now.",jp:"封印したものは、もう失われているかもしれない。", ok:false},
+        {en:"Some things wait patiently for the moment you are ready to return.",jp:"準備ができたその瞬間を、辛抱強く待っているものもある。", ok:true},
+        {en:"Perhaps it was better left sealed forever.",jp:"永遠に封印されたままの方がよかったかもしれない。", ok:false},
+      ],
+      hints:{
+        dir:'vault', dirEN:"↑ The vault lies ahead. Enter the center passage.",dirJP:"↑ 金庫はすぐそこだ。中央の通路へ。",
+        key:"In the shadow of something that once stood tall.",keyJP:"「かつて高くそびえ立ったものの影の中に。」"
+      }
+    },
+    exits:{left:true, right:false}
+  },
+  // Room 6: Treasure Vault
+  {
+    name:"The Cursed Vault", nameJP:"呪われた金庫",
+    floor:'vault', deco:[
+      {type:'shelf',tx:1,ty:1},{type:'shelf',tx:1,ty:4},
+      {type:'portrait',tx:9,ty:1},
+      {type:'pillar',tx:4,ty:2},{type:'pillar',tx:15,ty:2},
+      {type:'torch',tx:2,ty:5},{type:'torch',tx:17,ty:5},
+    ],
+    npc:null,
+    exits:{left:false, right:false},
+    objects:[
+      {tx:1,ty:1,tw:1,th:4,label:"Bookshelf",labelJP:"本棚",
+       en:"Rows of ancient books. Dust and silence.",jp:"古書の列。ほこりと静寂。"},
+      {tx:9,ty:1,tw:2,th:2,label:"Portrait",labelJP:"肖像画",
+       en:"A portrait of Elara. Her eyes look peaceful.",jp:"エラーラの肖像画。穏やかな目をしている。"},
+      {tx:8,ty:4,tw:4,th:2,label:"Grand Vault",labelJP:"大金庫",
+       en:"The vault. Waiting. It needs a key.",jp:"金庫。待っている。鍵が必要だ。",
+       isVault:true},
+      {tx:3,ty:8,tw:2,th:2,label:"Side Table",labelJP:"サイドテーブル",
+       en:"A half-burned candle. Nothing more.",jp:"半分燃えたろうそく。それだけだ。"},
+      {tx:4,ty:2,tw:1,th:4,label:"Stone Pillar",labelJP:"石柱",
+       en:"A cracked pillar. Cold stone in its shadow...",jp:"ひびの入った石柱。影の中には冷たい石が..."},
+      {tx:16,ty:8,tw:2,th:2,label:"Old Chest",labelJP:"古い宝箱",
+       en:"Dusty, forgotten in the corner. But wait — something glints inside...",jp:"ほこりをかぶり、隅に忘れられている。でも待って — 中に何かが光っている...",
+       isKey:true},
+    ]
+  }
+];
+
+// Correct path: right→left→right→left→vault
+const CORRECT_EXITS = [null,'right','left','right','left','vault'];
+// Room index connected by each exit
+const EXIT_MAP = {
+  0: {right:1},
+  1: {left:'dead',right:2},
+  2: {left:3,right:'dead'},
+  3: {left:'dead',right:4},
+  4: {left:5,right:'dead'},
+  5: {left:6}
+};
+
+// ══════════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════════
+let G = {
+  screen:'title', // title / playing / dlg / puzzle / hintpanel / dead / treasure / victory
+  room:0,
+  px:5*T, py:5.5*T, // player pixel position (top-left of sprite)
+  pdir:'right', // facing direction
+  keys:{},
+  solved:[], // solved room indices
+  hints:[], // collected hint objects
+  dlgQueue:[], dlgIdx:0,
+  curPuzzleRoom:0,
+  npcTalked:[], // rooms where NPC intro dialogue shown
+  objsFound:[], // treasure room objects found
+  hasKey:false,
+  vaultOpen:false,
+  frameCount:0,
+  msgTimer:0,
+  deadTimer:0
+};
+
+// ══════════════════════════════════════════
+// TILE DRAWING
+// ══════════════════════════════════════════
+function drawFloorTile(x,y,type,tx,ty) {
+  switch(type) {
+    case 'stone': case 'cliff':
+      ctx.fillStyle = (tx+ty)%2===0?'#22203a':'#1e1c34';
+      ctx.fillRect(x,y,T,T);
+      ctx.fillStyle='rgba(0,0,0,.25)';
+      ctx.fillRect(x,y,T,1);ctx.fillRect(x,y,1,T);
+      if(type==='cliff'&&ty<4){
+        ctx.fillStyle='rgba(10,30,60,.3)';
+        ctx.fillRect(x,y,T,T);
+      }
+      break;
+    case 'grass':
+      ctx.fillStyle=(tx+ty)%2===0?'#162a18':'#122414';
+      ctx.fillRect(x,y,T,T);
+      ctx.fillStyle='rgba(40,80,30,.2)';
+      for(let i=0;i<3;i++)ctx.fillRect(x+4+i*10,y+6,3,5);
+      break;
+    case 'wood':
+      ctx.fillStyle=(ty%2===0)?'#2e2010':'#271c0e';
+      ctx.fillRect(x,y,T,T);
+      ctx.fillStyle='rgba(0,0,0,.3)';
+      ctx.fillRect(x,y+10,T,1);ctx.fillRect(x,y+21,T,1);
+      ctx.fillStyle='rgba(0,0,0,.2)';
+      ctx.fillRect(x+(ty%2)*16,y,1,T);
+      break;
+    case 'vault':
+      ctx.fillStyle=(tx+ty)%2===0?'#1e1a30':'#19162a';
+      ctx.fillRect(x,y,T,T);
+      ctx.strokeStyle='rgba(201,168,76,.12)';ctx.lineWidth=.5;
+      ctx.strokeRect(x+2,y+2,T-4,T-4);
+      break;
+  }
+}
+
+function drawWall(x,y) {
+  ctx.fillStyle='#12101e';ctx.fillRect(x,y,T,T);
+  ctx.fillStyle='#1c1a2c';
+  for(let bx=0;bx<T;bx+=16)for(let by=0;by<T;by+=16){
+    ctx.fillRect(x+bx+1,y+by+1,13,13);
+  }
+  ctx.fillStyle='rgba(201,168,76,.06)';
+  ctx.fillRect(x,y,T,1);
+}
+
+function drawDoor(x,y,side) {
+  ctx.fillStyle='#080612';ctx.fillRect(x,y,T,T);
+  ctx.strokeStyle='rgba(201,168,76,.6)';ctx.lineWidth=1;
+  if(side==='left'){
+    ctx.beginPath();ctx.moveTo(x+T,y);ctx.lineTo(x+T,y+T);ctx.stroke();
+    ctx.beginPath();ctx.arc(x+T,y+T/2,T/2,Math.PI*1.5,Math.PI*.5,false);ctx.stroke();
+  } else {
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+T);ctx.stroke();
+    ctx.beginPath();ctx.arc(x,y+T/2,T/2,Math.PI*.5,Math.PI*1.5,false);ctx.stroke();
+  }
+}
+
+// ══════════════════════════════════════════
+// DECO DRAWING
+// ══════════════════════════════════════════
+function drawDeco(d) {
+  const x=d.tx*T, y=d.ty*T;
+  switch(d.type) {
+    case 'torch':
+      ctx.fillStyle='#2a1505';ctx.fillRect(x+13,y+16,6,14);
+      ctx.fillStyle='#C9A84C';ctx.fillRect(x+11,y+8,10,10);
+      ctx.fillStyle='#FF8C00';ctx.fillRect(x+13,y+4,6,8);
+      ctx.fillStyle='rgba(201,168,76,.15)';ctx.fillRect(x-4,y-4,T+8,T+8);
+      break;
+    case 'barrel':
+      ctx.fillStyle='#3a2a1a';ctx.fillRect(x+4,y+4,24,24);
+      ctx.strokeStyle='#5a4a2a';ctx.lineWidth=2;
+      ctx.strokeRect(x+4,y+4,24,24);
+      ctx.beginPath();ctx.moveTo(x+4,y+12);ctx.lineTo(x+28,y+12);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+4,y+20);ctx.lineTo(x+28,y+20);ctx.stroke();
+      break;
+    case 'crate':
+      ctx.fillStyle='#4a3520';ctx.fillRect(x+2,y+2,28,28);
+      ctx.strokeStyle='#6a5530';ctx.lineWidth=1;
+      ctx.strokeRect(x+2,y+2,28,28);
+      ctx.beginPath();ctx.moveTo(x+2,y+16);ctx.lineTo(x+30,y+16);
+      ctx.moveTo(x+16,y+2);ctx.lineTo(x+16,y+30);ctx.stroke();
+      break;
+    case 'plant':
+      ctx.fillStyle='#3a1a08';ctx.fillRect(x+12,y+20,8,12);
+      ctx.fillStyle='#1a3a10';
+      ctx.beginPath();ctx.ellipse(x+16,y+16,10,12,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#2a5018';
+      ctx.beginPath();ctx.ellipse(x+10,y+18,6,8,-.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(x+22,y+18,6,8,.5,0,Math.PI*2);ctx.fill();
+      break;
+    case 'shelf':
+      ctx.fillStyle='#2a1a08';ctx.fillRect(x+2,y+1,28,30);
+      ctx.fillStyle='#4a3018';
+      for(let i=0;i<3;i++)ctx.fillRect(x+2,y+1+i*10,28,8);
+      ctx.fillStyle='#6a5580';
+      ctx.fillRect(x+4,y+3,6,6);ctx.fillRect(x+12,y+3,6,6);ctx.fillRect(x+20,y+3,6,6);
+      break;
+    case 'table':
+      ctx.fillStyle='#4a3010';ctx.fillRect(x+2,y+8,28,16);
+      ctx.fillStyle='#3a2008';
+      ctx.fillRect(x+4,y+22,4,10);ctx.fillRect(x+24,y+22,4,10);
+      break;
+    case 'portrait':
+      ctx.fillStyle='#8A7060';ctx.fillRect(x,y+2,T*2,T+4);
+      ctx.fillStyle='#1a1428';ctx.fillRect(x+4,y+6,T*2-8,T-4);
+      ctx.fillStyle='rgba(201,168,76,.5)';ctx.strokeStyle='#C9A84C';ctx.lineWidth=1.5;
+      ctx.strokeRect(x+4,y+6,T*2-8,T-4);
+      // simple face
+      ctx.fillStyle='#c8a890';ctx.fillRect(x+28,y+12,8,10);
+      ctx.fillStyle='#3a2a18';ctx.fillRect(x+26,y+10,12,4);
+      break;
+    case 'pillar':
+      ctx.fillStyle='#1e1c2e';ctx.fillRect(x+6,y+2,20,28);
+      ctx.fillStyle='#2a2840';ctx.fillRect(x+4,y+2,4,28);ctx.fillRect(x+24,y+2,4,28);
+      ctx.fillStyle='#1a1828';ctx.fillRect(x+4,y,24,4);ctx.fillRect(x+4,y+28,24,4);
+      // crack
+      ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x+16,y+6);ctx.lineTo(x+13,y+18);ctx.lineTo(x+17,y+28);ctx.stroke();
+      break;
+  }
+}
+
+// ══════════════════════════════════════════
+// CHARACTER DRAWING
+// ══════════════════════════════════════════
+function drawChar(cx,cy,color,accent,dir,isPlayer) {
+  const x=Math.round(cx), y=Math.round(cy);
+  const bob = isPlayer ? Math.sin(G.frameCount*.15)*1 : 0;
+  const yy = y+bob;
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.3)';
+  ctx.beginPath();ctx.ellipse(x+12,y+30,10,4,0,0,Math.PI*2);ctx.fill();
+  // legs
+  ctx.fillStyle=color;
+  if(dir==='left'||dir==='right'){
+    const leg = Math.sin(G.frameCount*.2)*3;
+    ctx.fillRect(x+7,yy+20,6,10+leg);ctx.fillRect(x+15,yy+20,6,10-leg);
+  } else {
+    ctx.fillRect(x+7,yy+20,6,10);ctx.fillRect(x+15,yy+20,6,10);
+  }
+  // body
+  ctx.fillStyle=color;ctx.fillRect(x+4,yy+10,20,13);
+  ctx.fillStyle=accent;ctx.fillRect(x+6,yy+12,16,9);
+  // arms
+  if(dir==='down'||dir==='up'){
+    ctx.fillStyle=color;ctx.fillRect(x+1,yy+11,4,10);ctx.fillRect(x+23,yy+11,4,10);
+  }
+  // head
+  ctx.fillStyle='#d4b090';ctx.fillRect(x+7,yy+1,18,12);
+  // hair
+  ctx.fillStyle=accent;ctx.fillRect(x+6,yy,20,5);
+  // face (only when facing down or player)
+  if(dir==='down'){
+    ctx.fillStyle='#1a1020';ctx.fillRect(x+10,yy+5,3,3);ctx.fillRect(x+19,yy+5,3,3);
+    ctx.fillRect(x+11,yy+9,10,2);
+  }
+  // player indicator
+  if(isPlayer){
+    ctx.strokeStyle='rgba(201,168,76,.7)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x+12,yy-8);ctx.lineTo(x+12,yy-4);
+    ctx.moveTo(x+9,yy-7);ctx.lineTo(x+12,yy-4);ctx.lineTo(x+15,yy-7);ctx.stroke();
+  }
+}
+
+// ══════════════════════════════════════════
+// ROOM RENDERING
+// ══════════════════════════════════════════
+function renderRoom() {
+  const rd = ROOM_DATA[G.room];
+  // floor
+  for(let ty=0;ty<ROWS;ty++)for(let tx=0;tx<COLS;tx++){
+    const x=tx*T,y=ty*T;
+    if(ty===0||ty===ROWS-1||tx===0||tx===COLS-1){
+      // check if door opening
+      const isDoor = (tx===0||tx===COLS-1)&&ty>=4&&ty<=7;
+      const side = tx===0?'left':'right';
+      if(isDoor&&rd.exits&&rd.exits[side]) drawDoor(x,y,side);
+      else drawWall(x,y);
+    } else {
+      drawFloorTile(x,y,rd.floor,tx,ty);
+    }
+  }
+  // cliff sky effect
+  if(rd.floor==='cliff'){
+    ctx.fillStyle='rgba(5,10,30,.7)';
+    ctx.fillRect(0,0,W,4*T);
+    // stars
+    ctx.fillStyle='rgba(255,255,255,.6)';
+    [[100,30],[200,20],[350,50],[500,25],[580,40],[60,55],[440,15]].forEach(([sx,sy])=>{
+      ctx.fillRect(sx,sy,1.5,1.5);
+    });
+    // moon
+    ctx.fillStyle='rgba(200,190,160,.3)';
+    ctx.beginPath();ctx.arc(560,40,25,0,Math.PI*2);ctx.fill();
+  }
+  // decos
+  rd.deco.forEach(d=>drawDeco(d));
+  // treasure objects
+  if(G.room===6&&rd.objects){
+    rd.objects.forEach(o=>{
+      const ox=o.tx*T,oy=o.ty*T;
+      const found=G.objsFound.includes(o.label);
+      if(o.isVault){
+        // vault door
+        ctx.fillStyle=G.hasKey?'#1a3020':'#12101e';ctx.fillRect(ox,oy,o.tw*T,o.th*T);
+        ctx.strokeStyle=G.hasKey?'rgba(93,170,110,.8)':'rgba(201,168,76,.4)';ctx.lineWidth=2;
+        ctx.strokeRect(ox+2,oy+2,o.tw*T-4,o.th*T-4);
+        ctx.fillStyle=G.hasKey?'rgba(93,170,110,.4)':'rgba(201,168,76,.08)';
+        ctx.fillRect(ox+4,oy+4,o.tw*T-8,o.th*T-8);
+        // lock
+        ctx.fillStyle=G.hasKey?'rgba(93,170,110,.6)':'rgba(201,168,76,.4)';
+        ctx.fillRect(ox+o.tw*T/2-6,oy+o.th*T/2-8,12,14);
+        ctx.fillStyle='#1a1020';ctx.beginPath();ctx.arc(ox+o.tw*T/2,oy+o.th*T/2-4,5,0,Math.PI*2);ctx.fill();
+      } else if(o.isKey){
+        // old chest
+        ctx.fillStyle=found?'rgba(201,168,76,.2)':'#3a2a10';ctx.fillRect(ox,oy,o.tw*T,o.th*T);
+        ctx.strokeStyle=found?'rgba(201,168,76,.8)':'#6a4a20';ctx.lineWidth=1.5;
+        ctx.strokeRect(ox+1,oy+1,o.tw*T-2,o.th*T-2);
+        if(!found){
+          ctx.fillStyle='rgba(201,168,76,.3)';ctx.fillRect(ox+4,oy+4,o.tw*T-8,o.th*T-8);
+        } else {
+          ctx.fillStyle='rgba(201,168,76,.6)';ctx.fillRect(ox+o.tw*T/2-4,oy+o.th*T/2-4,8,8);
+        }
+      }
+      // interaction indicator
+      const near = Math.abs(G.px-ox)<T*o.tw+T&&Math.abs(G.py-oy)<T*o.th+T;
+      if(near&&!G.objsFound.includes(o.label)){
+        ctx.fillStyle='rgba(201,168,76,.85)';ctx.font='bold 11px Cinzel,serif';
+        ctx.textAlign='center';
+        ctx.fillText('E : '+o.label,(ox+o.tw*T/2),oy-4);
+      }
+    });
+  }
+  // NPC
+  if(rd.npc&&!G.solved.includes(G.room)){
+    const nx=rd.npc.tx*T-4, ny=rd.npc.ty*T-8;
+    drawChar(nx,ny,rd.npc.color,rd.npc.accent,'down',false);
+    // name tag
+    const near=Math.abs(G.px-nx)<T*2.5&&Math.abs(G.py-ny)<T*2.5;
+    ctx.fillStyle=near?'rgba(201,168,76,.9)':'rgba(201,168,76,.5)';
+    ctx.font=`${near?'bold ':''} 11px Cinzel,serif`;ctx.textAlign='center';
+    ctx.fillText(rd.npc.name,nx+12,ny-6);
+    if(near){ctx.font='10px serif';ctx.fillText('E',nx+12,ny-18);}
+  }
+  if(rd.npc&&G.solved.includes(G.room)){
+    // solved NPC fades to side
+    const nx=rd.npc.tx*T-4+T*2, ny=rd.npc.ty*T-8;
+    drawChar(nx,ny,rd.npc.color,rd.npc.accent,'right',false);
+    // checkmark
+    ctx.fillStyle='rgba(93,170,110,.8)';ctx.font='14px sans-serif';ctx.textAlign='center';
+    ctx.fillText('✓',nx+12,ny-6);
+  }
+  // intro object (room 0 journal)
+  if(rd.introObj){
+    const jx=rd.introObj.tx*T,jy=rd.introObj.ty*T;
+    ctx.fillStyle='#4a3820';ctx.fillRect(jx+4,jy+6,24,20);
+    ctx.strokeStyle='#C9A84C';ctx.lineWidth=.5;ctx.strokeRect(jx+4,jy+6,24,20);
+    ctx.fillStyle='rgba(201,168,76,.3)';ctx.fillRect(jx+7,jy+9,18,14);
+    const near=Math.abs(G.px-jx)<T*2&&Math.abs(G.py-jy)<T*2;
+    if(near&&!G.npcTalked.includes(0)){
+      ctx.fillStyle='rgba(201,168,76,.8)';ctx.font='11px Cinzel,serif';ctx.textAlign='center';
+      ctx.fillText('E : Journal',jx+16,jy-4);
+    }
+  }
+  // room name
+  ctx.fillStyle='rgba(201,168,76,.55)';ctx.font='italic 11px Cinzel,serif';ctx.textAlign='left';
+  ctx.fillText(rd.name+' ／ '+rd.nameJP,10,14);
+}
+
+// ══════════════════════════════════════════
+// PLAYER
+// ══════════════════════════════════════════
+function drawPlayer() {
+  drawChar(G.px,G.py,'#4a60b0','#7a90e0',G.pdir,true);
+}
+
+const SPD=2;
+function updatePlayer() {
+  if(G.screen!=='playing') return;
+  const rd=ROOM_DATA[G.room];
+  let dx=0,dy=0;
+  if(G.keys['ArrowLeft']||G.keys['a']||G.keys['A']){dx=-SPD;G.pdir='left';}
+  if(G.keys['ArrowRight']||G.keys['d']||G.keys['D']){dx=SPD;G.pdir='right';}
+  if(G.keys['ArrowUp']||G.keys['w']||G.keys['W']){dy=-SPD;G.pdir='up';}
+  if(G.keys['ArrowDown']||G.keys['s']||G.keys['S']){dy=SPD;G.pdir='down';}
+  if(!dx&&!dy) return;
+  const nx=G.px+dx, ny=G.py+dy;
+  // bounds + wall collision
+  const margin=6;
+  const tx1=Math.floor((nx+margin)/T), ty1=Math.floor((ny+margin)/T);
+  const tx2=Math.floor((nx+T-margin-1)/T), ty2=Math.floor((ny+T-margin-1)/T);
+  const isWall=(tx,ty)=>{
+    if(tx<0||ty<0||tx>=COLS||ty>=ROWS) return true;
+    if(ty===0||ty===ROWS-1) return true;
+    if((tx===0||tx===COLS-1)&&!(ty>=4&&ty<=7)) return true;
+    if((tx===0||tx===COLS-1)&&ty>=4&&ty<=7){
+      const side=tx===0?'left':'right';
+      return !(rd.exits&&rd.exits[side]);
+    }
+    // NPC collision
+    if(rd.npc&&!G.solved.includes(G.room)){
+      const ntx=Math.floor((rd.npc.tx*T)/T),nty=Math.floor((rd.npc.ty*T)/T);
+      if(tx===ntx&&(ty===nty||ty===nty+1)) return true;
+    }
+    return false;
+  };
+  if(!isWall(tx1,ty1)&&!isWall(tx2,ty1)&&!isWall(tx1,ty2)&&!isWall(tx2,ty2)){
+    G.px=nx;G.py=ny;
+  }
+  // door triggers
+  const cx=G.px+T/2, cy=G.py+T/2;
+  if(cx<T/2){triggerExit('left');}
+  else if(cx>W-T/2){triggerExit('right');}
+  else if(G.room===5&&cy<T*1.5&&G.solved.includes(5)){triggerExit('vault');}
+}
+
+function triggerExit(dir) {
+  if(G.screen!=='playing') return;
+  const rd=ROOM_DATA[G.room];
+  if(!rd.exits||(!rd.exits.left&&!rd.exits.right&&G.room!==5)) return;
+  // room 0 special: only right
+  if(G.room===0&&dir!=='right') return;
+  // room 5 vault exit
+  if(G.room===5&&dir==='vault'){goToRoom(6,'right');return;}
+  const dest=EXIT_MAP[G.room]&&EXIT_MAP[G.room][dir];
+  if(!dest) return;
+  if(dest==='dead'){showDeadEnd();return;}
+  if(G.room>0&&!G.solved.includes(G.room)){
+    showMsg("Help the person in this room first.\n先にこの部屋の人を助けよ。");return;
+  }
+  if(typeof dest==='number') goToRoom(dest,dir==='left'?'right':'left');
+}
+
+function goToRoom(roomIdx,entryFrom) {
+  G.room=roomIdx;
+  G.screen='playing';
+  G.px=entryFrom==='left'?T+4:W-T*2-4;
+  G.py=5.5*T;
+  G.pdir=entryFrom==='left'?'right':'left';
+  updateHUD();
+  // auto-show intro for room 0
+  if(roomIdx===0&&!G.npcTalked.includes(0)) return;
+  if(roomIdx===6){
+    showMsg("The vault... Find the key using your hints.\n金庫だ...ヒントを使って鍵を見つけよ。");
+  }
+}
+
+// ══════════════════════════════════════════
+// INTERACTION (E key)
+// ══════════════════════════════════════════
+function interact() {
+  if(G.screen!=='playing') return;
+  const rd=ROOM_DATA[G.room];
+  // room 0 journal
+  if(G.room===0&&rd.introObj){
+    const jx=rd.introObj.tx*T,jy=rd.introObj.ty*T;
+    if(Math.abs(G.px-jx)<T*2&&Math.abs(G.py-jy)<T*2){
+      if(!G.npcTalked.includes(0)){G.npcTalked.push(0);}
+      openDialogue(rd.intro,'???');
+      return;
+    }
+  }
+  // treasure room objects
+  if(G.room===6&&rd.objects){
+    let found=false;
+    rd.objects.forEach(o=>{
+      if(found) return;
+      if(Math.abs(G.px-o.tx*T)<T*(o.tw+.5)&&Math.abs(G.py-o.ty*T)<T*(o.th+.5)){
+        found=true;
+        if(o.isVault){
+          if(G.hasKey){G.screen='victory';document.getElementById('victory').style.display='flex';}
+          else{showMsg("The vault is locked.\n金庫は施錠されている。");}
+        } else if(o.isKey){
+          if(!G.objsFound.includes(o.label)){
+            G.objsFound.push(o.label);
+            G.hasKey=true;
+            showDlg('',o.en+'\n\nYou found the key!\nPress E on the vault door to use it.',o.jp+'\n\n鍵を見つけた！\n金庫の扉にEキーで使え。');
+          }
+        } else {
+          if(!G.objsFound.includes(o.label)){G.objsFound.push(o.label);}
+          showDlg(o.label,o.en,o.jp);
+        }
+      }
+    });
+    return;
+  }
+  // NPC
+  if(rd.npc&&!G.solved.includes(G.room)){
+    const nx=rd.npc.tx*T-4,ny=rd.npc.ty*T-8;
+    if(Math.abs(G.px-nx)<T*2.5&&Math.abs(G.py-ny)<T*2.5){
+      if(!G.npcTalked.includes(G.room)){
+        G.npcTalked.push(G.room);
+        openDialogue(rd.npc.dlg,rd.npc.name);
+      } else {
+        openPuzzle(G.room);
+      }
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+// DIALOGUE SYSTEM
+// ══════════════════════════════════════════
+function openDialogue(lines,speaker) {
+  G.screen='dlg';G.dlgQueue=lines;G.dlgIdx=0;
+  showDlgLine();
+}
+function showDlgLine(){
+  const l=G.dlgQueue[G.dlgIdx];
+  if(!l){closeDlg();return;}
+  document.getElementById('dlg-name').textContent=(l.sp||'')+(l.spJP?' ／ '+l.spJP:'');
+  document.getElementById('dlg-text').textContent=l.en;
+  document.getElementById('dlg-jp').textContent=l.jp;
+  document.getElementById('dlg').style.display='block';
+}
+function advanceDlg(){
+  G.dlgIdx++;
+  if(G.dlgIdx>=G.dlgQueue.length){
+    closeDlg();
+    // after NPC intro → open puzzle
+    if(G.room>0&&ROOM_DATA[G.room].npc&&G.npcTalked.includes(G.room)&&!G.solved.includes(G.room)){
+      setTimeout(()=>openPuzzle(G.room),200);
+    }
+  } else showDlgLine();
+}
+function closeDlg(){
+  document.getElementById('dlg').style.display='none';
+  if(G.screen==='dlg') G.screen='playing';
+}
+function showDlg(name,en,jp){
+  G.screen='dlg';
+  G.dlgQueue=[{sp:name,spJP:'',en,jp}];G.dlgIdx=0;showDlgLine();
+}
+
+// ══════════════════════════════════════════
+// PUZZLE SYSTEM
+// ══════════════════════════════════════════
+function openPuzzle(roomIdx){
+  const npc=ROOM_DATA[roomIdx].npc;
+  G.screen='puzzle';G.curPuzzleRoom=roomIdx;
+  document.getElementById('puz-q').textContent=npc.question;
+  document.getElementById('puz-q-jp').textContent=npc.questionJP;
+  const optsEl=document.getElementById('puz-opts');
+  optsEl.innerHTML='';
+  npc.opts.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='puz-opt';
+    btn.innerHTML=`<strong style="color:rgba(201,168,76,.6)">${String.fromCharCode(65+i)}.</strong> ${o.en}<br><span style="font-size:.8rem;color:#9B96B0;font-style:italic">${o.jp}</span>`;
+    btn.onclick=()=>choosePuzzleOption(o.ok,roomIdx);
+    optsEl.appendChild(btn);
+  });
+  document.getElementById('puz').style.display='flex';
+}
+function choosePuzzleOption(correct,roomIdx){
+  document.getElementById('puz').style.display='none';
+  if(correct){
+    G.solved.push(roomIdx);
+    const hints=ROOM_DATA[roomIdx].npc.hints;
+    G.hints.push(hints);
+    updateHUD();
+    showHintPanel(hints,roomIdx);
+  } else {
+    G.screen='playing';
+    showMsg("That didn't land right. Try again.\nうまく伝わらなかった。もう一度。");
+    setTimeout(()=>{ if(G.screen==='playing') openPuzzle(roomIdx); },1800);
+  }
+}
+
+// ══════════════════════════════════════════
+// HINT PANEL
+// ══════════════════════════════════════════
+function showHintPanel(hints,roomIdx){
+  G.screen='hintpanel';
+  const npc=ROOM_DATA[roomIdx].npc;
+  document.getElementById('hp-title').textContent=`${npc.name}'s Worry Heard ／ ${npc.nameJP}の悩みが聞かれた`;
+  const cards=document.getElementById('hp-cards');
+  cards.innerHTML=`
+    <div class="hint-card">
+      <div class="hint-label">DIRECTION HINT ／ 方向ヒント</div>
+      <div class="hint-text">${hints.dirEN}</div>
+      <div class="hint-jp">${hints.dirJP}</div>
+    </div>
+    <div class="hint-card">
+      <div class="hint-label">KEY HINT ${G.hints.length} ／ 鍵ヒント${G.hints.length}</div>
+      <div class="hint-text">"${hints.key}"</div>
+      <div class="hint-jp">${hints.keyJP}</div>
+    </div>`;
+  document.getElementById('hint-panel').style.display='flex';
+}
+function closeHintPanel(){
+  document.getElementById('hint-panel').style.display='none';
+  G.screen='playing';
+}
+
+// ══════════════════════════════════════════
+// DEAD END
+// ══════════════════════════════════════════
+function showDeadEnd(){
+  G.screen='dead';
+  const msgs=["A dead end. The path forward is not here.\n行き止まり。先へ進む道はここではない。",
+    "Something feels wrong. This is not the way.\n何かがおかしい。ここは違う。",
+    "The walls close in. Turn back.\n壁が迫ってくる。引き返せ。"];
+  showMsg(msgs[Math.floor(Math.random()*msgs.length)]);
+  setTimeout(()=>{
+    G.screen='playing';
+    G.px=W/2-T/2;G.py=5.5*T;
+    document.getElementById('msg').style.display='none';
+  },2000);
+}
+
+// ══════════════════════════════════════════
+// MSG OVERLAY
+// ══════════════════════════════════════════
+function showMsg(text){
+  const el=document.getElementById('msg');
+  el.innerHTML=text.replace(/\n/g,'<br>');
+  el.style.display='block';
+  clearTimeout(G.msgTimer);
+  G.msgTimer=setTimeout(()=>el.style.display='none',2200);
+}
+
+// ══════════════════════════════════════════
+// HUD
+// ══════════════════════════════════════════
+function updateHUD(){
+  const dots=document.getElementById('hud-dots');
+  dots.innerHTML=[1,2,3,4,5].map(i=>
+    `<span class="hud-dot${G.solved.includes(i)?' lit':''}"></span>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════
+// GAME LOOP
+// ══════════════════════════════════════════
+function loop(){
+  G.frameCount++;
+  ctx.clearRect(0,0,W,H);
+  renderRoom();
+  drawPlayer();
+  if(G.screen==='playing'||G.screen==='dead') updatePlayer();
+  requestAnimationFrame(loop);
+}
+
+// ══════════════════════════════════════════
+// INPUT
+// ══════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  G.keys[e.key]=true;
+  if((e.key==='e'||e.key==='E'||e.key===' ')&&G.screen==='playing') interact();
+  if((e.key==='e'||e.key==='E'||e.key===' ')&&G.screen==='dlg') advanceDlg();
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keyup',e=>{G.keys[e.key]=false;});
+canvas.addEventListener('click',()=>canvas.focus());
+
+// ══════════════════════════════════════════
+// START
+// ══════════════════════════════════════════
+function startGame(){
+  document.getElementById('title').style.display='none';
+  G.screen='playing';
+  G.room=0;G.px=5*T;G.py=5.5*T;G.pdir='right';
+  G.solved=[];G.hints=[];G.npcTalked=[];G.objsFound=[];
+  G.hasKey=false;G.vaultOpen=false;G.frameCount=0;
+  updateHUD();
+  canvas.focus();
+  setTimeout(()=>{
+    openDialogue(ROOM_DATA[0].intro,'???');
+  },400);
+}
+
+loop();
+</script>
+</body>
+</html>
